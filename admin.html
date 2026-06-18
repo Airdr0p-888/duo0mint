@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>熊猫 PANDA MINT — 管理合约</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+    :root {
+      --bg-deep:    #e8e4f0;
+      --bg-card:    #f0edf7;
+      --bg-input:   #e4e0ed;
+      --accent1:    #0f766e;
+      --accent2:    #7c3aed;
+      --accent3:    #b45309;
+      --danger:     #dc2626;
+      --success:    #15803d;
+      --text-main:  #1e1b35;
+      --text-muted: #5b5a72;
+      --border:     #cdc8dc;
+      --border-focus: rgba(15,118,110,.45);
+      --radius: 12px;
+      --font: 'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    }
+    body {
+      background: var(--bg-deep);
+      color: var(--text-main);
+      font-family: var(--font);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 700px; margin: 0 auto; }
+    header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 16px 0; margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+    .logo-text-en { font-size:.72rem; letter-spacing:3px; color:var(--accent1); display:block; line-height:1; }
+    .logo-text-cn { font-size:1.05rem; color:var(--text-main); font-weight:800; display:block; line-height:1.3; }
+    .btn {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:9px 20px; border-radius:50px; font-weight:700; font-size:.9rem;
+      cursor:pointer; text-decoration:none; border:none; transition:all .2s;
+    }
+    .btn-primary { background:linear-gradient(135deg,var(--accent1),var(--accent2)); color:#000; }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 0 24px rgba(0,255,200,.4); }
+    .btn-ghost { background:transparent; color:var(--text-main); border:1px solid var(--border); }
+    .btn-danger { background:var(--danger); color:#fff; }
+    .btn-success { background:var(--success); color:#fff; }
+    .wallet-addr {
+      font-size:.82rem; color:var(--accent1); font-family:monospace;
+      background:rgba(13,148,136,.08); border:1px solid rgba(13,148,136,.2);
+      padding:5px 14px; border-radius:50px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-header {
+      font-size:1.1rem; font-weight:800; margin-bottom:18px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .form-label {
+      font-size:.88rem; font-weight:700; color:var(--text-main);
+      margin-bottom:6px; display:block;
+    }
+    .form-hint {
+      font-size:.78rem; color:var(--text-muted); margin-top:4px; display:block;
+    }
+    input[type=text], input[type=number], input[type=datetime-local] {
+      background:var(--bg-input); border:1px solid var(--border);
+      border-radius:9px; padding:10px 14px; color:var(--text-main);
+      font-size:.92rem; font-family:var(--font); width:100%;
+      transition:border-color .2s; outline:none;
+    }
+    input:focus { border-color:var(--border-focus); }
+    .status-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .status-item {
+      background:rgba(0,0,0,.02); border:1px solid var(--border);
+      border-radius:9px; padding:12px 14px;
+    }
+    .status-label { font-size:.78rem; color:var(--text-muted); }
+    .status-value { font-size:1rem; font-weight:800; margin-top:2px; }
+    .status-value.on { color:var(--success); }
+    .status-value.off { color:var(--danger); }
+    .msg { padding:12px 16px; border-radius:9px; font-size:.88rem; margin-top:14px; }
+    .msg.ok { background:rgba(21,128,61,.06); border:1px solid rgba(21,128,61,.2); color:var(--success); }
+    .msg.err { background:rgba(220,38,38,.06); border:1px solid rgba(220,38,38,.2); color:var(--danger); }
+    .msg.info { background:rgba(13,148,136,.06); border:1px solid rgba(13,148,136,.2); color:var(--accent1); }
+    .loading { text-align:center; padding:40px; color:var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="launch.html" class="logo">
+        <span class="logo-text-en">PANDA MINT</span>
+        <span class="logo-text-cn">管理合约</span>
+      </a>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span id="wallet-addr" class="wallet-addr" style="display:none"></span>
+        <button class="btn btn-primary" id="btn-connect" onclick="connectWallet()">连接钱包 🦊</button>
+      </div>
+    </header>
+
+    <!-- 加载合约 -->
+    <div class="card">
+      <div class="card-header">📦 加载合约</div>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div style="flex:1">
+          <label class="form-label">合约地址</label>
+          <input type="text" id="contract-addr-input" placeholder="0x..." />
+        </div>
+        <button class="btn btn-primary" onclick="loadContract()" style="height:42px">加载</button>
+      </div>
+      <div id="load-msg" style="display:none;margin-top:12px"></div>
+    </div>
+
+    <!-- 合约状态 -->
+    <div class="card" id="status-card" style="display:none">
+      <div class="card-header">📊 合约状态</div>
+      <div class="status-grid" id="status-grid"></div>
+    </div>
+
+    <!-- 开盘管理 -->
+    <div class="card" id="trading-card" style="display:none">
+      <div class="card-header">⏰ 开盘管理</div>
+      
+      <div style="margin-bottom:18px">
+        <label class="form-label">定时开盘时间</label>
+        <input type="datetime-local" id="admin-scheduled-time" />
+        <span class="form-hint">设置后，到达该时间时自动开盘。留空则取消定时开盘。</span>
+        <button class="btn btn-primary" onclick="setScheduledTime()" style="margin-top:10px">设置定时开盘</button>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <label class="form-label">满额自动开盘</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+          <button class="btn" id="btn-auto-activate" onclick="toggleAutoActivate()">加载中...</button>
+          <span class="form-hint">Presale 满额后是否自动开盘</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">手动开盘/关盘</label>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn-success" onclick="enableTrading()">🟢 立即开盘</button>
+          <button class="btn btn-danger" onclick="disableTrading()">🔴 关闭交易</button>
+        </div>
+      </div>
+
+      <div id="trading-msg" style="display:none;margin-top:14px"></div>
+    </div>
+
+    <!-- Mint 底池比例 -->
+    <div class="card" id="lp-card" style="display:none">
+      <div class="card-header">🏊 Mint 底池比例</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <input type="number" id="admin-lp-pct" min="0" max="100" value="100" step="1"
+               style="width:80px;padding:8px 12px;font-size:1rem;font-weight:700;text-align:center;border:1px solid var(--border);border-radius:9px;background:var(--bg-input);color:var(--text-main)" />
+        <span style="font-size:.9rem;color:var(--text-muted)">%</span>
+        <button class="btn btn-primary" onclick="setLpBps()">设置</button>
+      </div>
+      <span class="form-hint">0% = 全部 BNB 发给部署者；100% = 全部加底池（平开）</span>
+      <div id="lp-msg" style="display:none;margin-top:12px"></div>
+    </div>
+
+  </div>
+
+  <script src="ethers.umd.min.js"></script>
+  <script>
+    // 从 URL 参数加载合约 ABI
+    let CONTRACT_ABI = [];
+    try {
+      // 尝试从 contract_data.js 加载
+      const script = document.createElement('script');
+      script.src = 'contract_data.js';
+      document.head.appendChild(script);
+      script.onload = () => {
+        if (typeof CONTRACT_DATA !== 'undefined') {
+          CONTRACT_ABI = CONTRACT_DATA.ABI;
+        }
+      };
+    } catch(e) {}
+
+    let provider, signer, userAccount, contract, contractAddr;
+
+    // 连接钱包
+    async function connectWallet() {
+      if (!window.ethereum) return alert('请安装 MetaMask！');
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        userAccount = await signer.getAddress();
+        document.getElementById('wallet-addr').textContent = userAccount.slice(0,6) + '...' + userAccount.slice(-4);
+        document.getElementById('wallet-addr').style.display = 'inline';
+        document.getElementById('btn-connect').textContent = '✅ 已连接';
+        document.getElementById('btn-connect').disabled = true;
+
+        // 如果 URL 里有合约地址，自动加载
+        const params = new URLSearchParams(window.location.search);
+        const addr = params.get('contract');
+        if (addr && ethers.utils.isAddress(addr)) {
+          document.getElementById('contract-addr-input').value = addr;
+          loadContract();
+        }
+      } catch(e) { alert('连接失败: ' + e.message); }
+    }
+
+    // 加载合约
+    async function loadContract() {
+      const addr = document.getElementById('contract-addr-input').value.trim();
+      if (!ethers.utils.isAddress(addr)) return showMsg('load-msg', '请输入有效的合约地址', 'err');
+      if (!signer) return alert('请先连接钱包！');
+
+      // 如果 ABI 还没加载，用简化 ABI
+      const abi = CONTRACT_ABI.length > 0 ? CONTRACT_ABI : [
+        "function name() view returns (string)",
+        "function symbol() view returns (string)",
+        "function tradingActive() view returns (bool)",
+        "function presaleActive() view returns (bool)",
+        "function scheduledTradingTime() view returns (uint256)",
+        "function autoActivateOnFill() view returns (bool)",
+        "function mintLiquidityBps() view returns (uint256)",
+        "function enableTrading()",
+        "function disableTrading()",
+        "function setScheduledTradingTime(uint256)",
+        "function setAutoActivateOnFill(bool)",
+        "function setMintLiquidityBps(uint256)",
+        "function owner() view returns (address)"
+      ];
+
+      try {
+        contract = new ethers.Contract(addr, abi, signer);
+        contractAddr = addr;
+
+        // 读取状态
+        const [name, symbol, tradingActive, presaleActive, scheduledTime, autoActivate, lpBps, owner] =
+          await Promise.all([
+            contract.name().catch(() => '?'),
+            contract.symbol().catch(() => '?'),
+            contract.tradingActive(),
+            contract.presaleActive(),
+            contract.scheduledTradingTime(),
+            contract.autoActivateOnFill(),
+            contract.mintLiquidityBps(),
+            contract.owner()
+          ]);
+
+        const isOwner = owner.toLowerCase() === userAccount.toLowerCase();
+
+        // 显示状态
+        let html = `
+          <div class="status-item"><div class="status-label">代币</div><div class="status-value">${name} (${symbol})</div></div>
+          <div class="status-item"><div class="status-label">交易状态</div><div class="status-value ${tradingActive?'on':'off'}">${tradingActive?'🟢 已开盘':'🔴 未开盘'}</div></div>
+          <div class="status-item"><div class="status-label">Presale</div><div class="status-value ${presaleActive?'on':'off'}">${presaleActive?'进行中':'已结束'}</div></div>
+          <div class="status-item"><div class="status-label">Mint 底池比例</div><div class="status-value">${lpBps/100}%</div></div>
+          <div class="status-item"><div class="status-label">满额自动开盘</div><div class="status-value ${autoActivate?'on':'off'}">${autoActivate?'开启':'关闭'}</div></div>
+          <div class="status-item"><div class="status-label">定时开盘</div><div class="status-value">${scheduledTime > 0 ? new Date(scheduledTime*1000).toLocaleString() : '未设置'}</div></div>
+        `;
+        document.getElementById('status-grid').innerHTML = html;
+        document.getElementById('status-card').style.display = 'block';
+
+        // 设置表单默认值
+        if (scheduledTime > 0) {
+          const dt = new Date(scheduledTime * 1000);
+          const localDT = new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+          document.getElementById('admin-scheduled-time').value = localDT;
+        }
+        document.getElementById('admin-lp-pct').value = lpBps / 100;
+        document.getElementById('btn-auto-activate').textContent = autoActivate ? '关闭自动开盘' : '开启自动开盘';
+        document.getElementById('btn-auto-activate').className = 'btn ' + (autoActivate ? 'btn-danger' : 'btn-success');
+
+        // 显示管理卡片
+        document.getElementById('trading-card').style.display = 'block';
+        document.getElementById('lp-card').style.display = 'block';
+
+        showMsg('load-msg', `合约已加载！${isOwner ? '你是 Owner，可以管理。' : '⚠️ 你不是 Owner，无法调用管理函数。'}`, isOwner ? 'ok' : 'err');
+      } catch(e) {
+        showMsg('load-msg', '加载失败: ' + e.message, 'err');
+      }
+    }
+
+    // 设置定时开盘
+    async function setScheduledTime() {
+      const time = document.getElementById('admin-scheduled-time').value;
+      if (!time) {
+        // 取消定时开盘
+        try {
+          const tx = await contract.setScheduledTradingTime(0);
+          await tx.wait();
+          showMsg('trading-msg', '定时开盘已取消', 'ok');
+          loadContract();
+        } catch(e) { showMsg('trading-msg', '取消失败: ' + e.message, 'err'); }
+        return;
+      }
+      const ts = Math.floor(new Date(time).getTime() / 1000);
+      try {
+        const tx = await contract.setScheduledTradingTime(ts);
+        await tx.wait();
+        showMsg('trading-msg', '定时开盘已设置: ' + new Date(ts*1000).toLocaleString(), 'ok');
+        loadContract();
+      } catch(e) { showMsg('trading-msg', '设置失败: ' + e.message, 'err'); }
+    }
+
+    // 切换自动开盘
+    async function toggleAutoActivate() {
+      try {
+        const current = await contract.autoActivateOnFill();
+        const tx = await contract.setAutoActivateOnFill(!current);
+        await tx.wait();
+        showMsg('trading-msg', `满额自动开盘已${!current?'开启':'关闭'}`, 'ok');
+        loadContract();
+      } catch(e) { showMsg('trading-msg', '设置失败: ' + e.message, 'err'); }
+    }
+
+    // 手动开盘
+    async function enableTrading() {
+      try {
+        const tx = await contract.enableTrading();
+        await tx.wait();
+        showMsg('trading-msg', '交易已开盘！', 'ok');
+        loadContract();
+      } catch(e) { showMsg('trading-msg', '开盘失败: ' + e.message, 'err'); }
+    }
+
+    // 关闭交易
+    async function disableTrading() {
+      try {
+        const tx = await contract.disableTrading();
+        await tx.wait();
+        showMsg('trading-msg', '交易已关闭', 'ok');
+        loadContract();
+      } catch(e) { showMsg('trading-msg', '关闭失败: ' + e.message, 'err'); }
+    }
+
+    // 设置 Mint 底池比例
+    async function setLpBps() {
+      const pct = parseInt(document.getElementById('admin-lp-pct').value) || 0;
+      const bps = pct * 100;
+      try {
+        const tx = await contract.setMintLiquidityBps(bps);
+        await tx.wait();
+        showMsg('lp-msg', `Mint 底池比例已设置为 ${pct}%`, 'ok');
+        loadContract();
+      } catch(e) { showMsg('lp-msg', '设置失败: ' + e.message, 'err'); }
+    }
+
+    // 显示消息
+    function showMsg(id, text, type) {
+      const el = document.getElementById(id);
+      el.style.display = 'block';
+      el.className = 'msg ' + type;
+      el.textContent = text;
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    // 页面加载时自动连接钱包（如果已连接）
+    window.addEventListener('load', () => {
+      if (window.ethereum && window.ethereum.selectedAddress) connectWallet();
+    });
+  </script>
+</body>
+</html>
